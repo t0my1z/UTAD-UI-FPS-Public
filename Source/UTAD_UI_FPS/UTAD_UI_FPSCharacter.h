@@ -6,7 +6,11 @@
 #include "GameFramework/Character.h"
 #include "UTAD_UI_FPSCharacter.generated.h"
 
+class USkillTreeComponent;
+class USplashArtScreen;
 class UInputComponent;
+class UInputMappingContext;
+class UInputAction;
 class USkeletalMeshComponent;
 class USceneComponent;
 class UCameraComponent;
@@ -16,6 +20,11 @@ class UTP_WeaponComponent;
 struct FInputActionValue;
 
 class UPlayerHUD;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnealthChanged, int, CurrentHealth, int, MaxHealth);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDamaged, float, HealthPercentage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnTotalBulletsChanged, int, TotalBullets);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSkillPointChanged, int, SkillPoints);
 
 UCLASS(config=Game)
 class AUTAD_UI_FPSCharacter : public ACharacter
@@ -32,19 +41,22 @@ class AUTAD_UI_FPSCharacter : public ACharacter
 
 	/** Weapon component that is attached */
 	UPROPERTY(VisibleDefaultsOnly, Category = Weapon)
-	UTP_WeaponComponent* AttachedWeaponComponent;
+	UTP_WeaponComponent* AttachedWeaponComponent; 
 
+	UPROPERTY(VisibleAnywhere, Category = SkillTree)
+	USkillTreeComponent* SkillTreeComponent;
+	
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	class UInputMappingContext* DefaultMappingContext;
+	UInputMappingContext* DefaultMappingContext;
 
 	/** Jump Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	class UInputAction* JumpAction;
+	UInputAction* JumpAction;
 
 	/** Move Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
-	class UInputAction* MoveAction;
+	UInputAction* MoveAction;
 
 	
 public:
@@ -57,7 +69,7 @@ public:
 		
 	/** Look Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	class UInputAction* LookAction;
+	UInputAction* LookAction;
 
 	/** Current Health */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats)
@@ -67,6 +79,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats)
 	int MaxHealth = 100;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Stats)
+	int SkillPoints = 2; 
+	
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnealthChanged HealthChanged;
+	
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnDamaged OnDamaged;
+	
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnTotalBulletsChanged OnTotalBulletsChanged;
+	
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnSkillPointChanged OnSkillPointChanged;
+	
 	/** Counter for bullets in player (not in weapon) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Weapon)
 	int TotalBullets = 100;
@@ -75,6 +102,11 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Weapon)
 	bool bHasRifle;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Debug)
+	bool DebugOn;
+	
+#pragma region Getters & Setters
+	
 	/** Setter to set the int */
 	UFUNCTION(BlueprintCallable, Category = Stats)
 	void SetHealth(int NewHealth);
@@ -106,21 +138,39 @@ public:
 	/** Getter for the int */
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	int GetTotalBullets();
+	
+	UFUNCTION(BlueprintCallable, Category = Stats)
+	void SetSkillPoints(int newSkillPoints);
 
+	UFUNCTION(BlueprintCallable, Category = Stats)
+	int GetSkillPoints() const { return SkillPoints; }
+	
+#pragma endregion
+	
 	/** Function to add an amount of bullets to TotalBullets */
 	UFUNCTION(BlueprintCallable, Category = Weapon)
 	void AddBullets(int Bullets);
 
-	void SetAttachedWeaponComponent(UTP_WeaponComponent* WeaponComponent);
+	UFUNCTION(BlueprintCallable, Category = Damage)
+	void GetDamaged(int _inDamage);
 
+	UFUNCTION(BlueprintCallable, Category = Damage)
+	void GetHealed(int _inHeal); 
+
+	UPlayerHUD* GetPlayerHUD() const;
+	
+	void SetAttachedWeaponComponent(UTP_WeaponComponent* WeaponComponent);
+	
 	/****************************************************/
 	/************************ UI ************************/
 	/****************************************************/
-
+	
 	/** Widget Blueprints that will be used to create the instances */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UI)
 	TSubclassOf<UPlayerHUD> PlayerHUDWidget;
-
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = UI)
+	TSubclassOf<USplashArtScreen> SplashArtWidget;
+	
 protected:
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
@@ -148,6 +198,7 @@ private:
 	/****************************************************/
 
 	/** Instances that will be created and showed on viewport */
+	UPROPERTY()
 	UPlayerHUD* PlayerHUDInstance;
 };
 

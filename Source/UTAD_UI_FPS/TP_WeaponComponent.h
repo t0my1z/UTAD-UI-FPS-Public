@@ -8,6 +8,12 @@
 
 class AUTAD_UI_FPSCharacter;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEnemyTargeted, bool, EnemyFound);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnWeaponReload, int, NumOfBullets);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnWeaponShot);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnReloadState);
+
+
 UCLASS(Blueprintable, BlueprintType, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class UTAD_UI_FPS_API UTP_WeaponComponent : public USkeletalMeshComponent
 {
@@ -42,6 +48,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* ReloadAction;
 
+	float ReloadTimer;
+	float ReloadTime; 
+	
 	/** Maximum number of times the player can shoot the weapon before reloading */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	int MagazineSize = 10;
@@ -50,6 +59,26 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	int CurrentNumBullets = 0;
 
+	//Distance to detect enemies
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
+	int TraceDistance = 600;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
+	bool Debug = false;
+	
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnEnemyTargeted OnEnemyTargeted;
+	
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnWeaponShot OnWeaponShot;
+
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnWeaponReload OnWeaponReload;
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnReloadState OnReloadStart;
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnReloadState OnReloadEnd;
+	
 	/** Sets default values for this component's properties */
 	UTP_WeaponComponent();
 
@@ -91,6 +120,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon")
 	void SetCurrentNumBullets(int NewCurrentNumBullets);
 
+	void EnemyDetected();
+	
 protected:
 	/** Ends gameplay for this component. */
 	UFUNCTION()
@@ -98,9 +129,11 @@ protected:
 
 private:
 	/** The Character holding this weapon*/
+	UPROPERTY()
 	AUTAD_UI_FPSCharacter* Character;
 
-	float ReloadTimer;
 
 	bool bIsReloading;
+
+	bool enemyDetected = false;
 };

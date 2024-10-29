@@ -50,7 +50,7 @@ void AUTAD_UI_FPSProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherAc
 		AUTAD_UI_FPSCharacter* Character = Cast<AUTAD_UI_FPSCharacter>(OtherActor);
 		if (IsValid(Character))
 		{
-			Character->SetHealth(Character->GetHealth() - DAMAGE);
+			Character->GetDamaged(DAMAGE);
 			Destroy();
 			return;
 		}

@@ -9,8 +9,13 @@
 #include "Kismet/GameplayStatics.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "UTAD_UI_FPS_Enemy.h"
 
 #include "Blueprint/UserWidget.h"
+#include "UI/AmmoCounter.h"
+#include "UI/Crosshair.h"
+#include "UI/PlayerHUD.h"
+#include "UI/ReloadBar.h"
 
 #define RELOAD_TIME 1.f
 
@@ -28,9 +33,9 @@ void UTP_WeaponComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
 	if (bIsReloading)
 	{
 		ReloadTimer += DeltaTime;
-		// To test ReloadTimer
-		// GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, FString::Printf(TEXT("%f"), ReloadTimer));
 	}
+
+	EnemyDetected();
 }
 
 void UTP_WeaponComponent::Fire()
@@ -82,7 +87,9 @@ void UTP_WeaponComponent::Fire()
 		}
 	}
 
-	--CurrentNumBullets;
+	if(OnWeaponShot.IsBound()) OnWeaponShot.Broadcast();
+	
+	SetCurrentNumBullets(CurrentNumBullets -1);
 }
 
 void UTP_WeaponComponent::StartReload()
@@ -91,7 +98,7 @@ void UTP_WeaponComponent::StartReload()
 	{
 		return;
 	}
-
+	
 	int playerBullets = Character->GetTotalBullets();
 	playerBullets += CurrentNumBullets;
 
@@ -102,6 +109,8 @@ void UTP_WeaponComponent::StartReload()
 
 	bIsReloading = true;
 	ReloadTimer = 0.f;
+
+	if(OnReloadStart.IsBound()) OnReloadStart.Broadcast();
 }
 
 void UTP_WeaponComponent::CompleteReload()
@@ -115,10 +124,11 @@ void UTP_WeaponComponent::CompleteReload()
 
 	int playerBullets = Character->GetTotalBullets();
 	playerBullets += CurrentNumBullets;
-
-	CurrentNumBullets = __min(MagazineSize, playerBullets);
-
+	
+	SetCurrentNumBullets(__min(MagazineSize, playerBullets));
 	Character->SetTotalBullets(playerBullets - CurrentNumBullets);
+
+	if(OnReloadEnd.IsBound()) OnReloadEnd.Broadcast();
 }
 
 void UTP_WeaponComponent::CancelReload()
@@ -129,6 +139,7 @@ void UTP_WeaponComponent::CancelReload()
 	}
 
 	bIsReloading = false;
+	if(OnReloadEnd.IsBound()) OnReloadEnd.Broadcast();
 }
 
 int UTP_WeaponComponent::GetMagazineSize()
@@ -149,11 +160,80 @@ int UTP_WeaponComponent::GetCurrentNumBullets()
 void UTP_WeaponComponent::SetCurrentNumBullets(int NewCurrentNumBullets)
 {
 	CurrentNumBullets = NewCurrentNumBullets;
+
+	if(OnWeaponReload.IsBound()) OnWeaponReload.Broadcast(CurrentNumBullets); 
+}
+
+void UTP_WeaponComponent::EnemyDetected()
+{
+	// Ensure the owner is valid
+	if (AActor* Owner = GetOwner())
+	{
+		if (Character == nullptr || Character->GetController() == nullptr)	return;
+		
+		APlayerController* PlayerController = Cast<APlayerController>(Character->GetController());
+		
+		const FRotator CameraRotation  = PlayerController->PlayerCameraManager->GetCameraRotation();
+		FVector Start = GetOwner()->GetActorLocation() + CameraRotation .RotateVector(MuzzleOffset);; // Start position
+		FVector ForwardVector = CameraRotation.Vector();// Forward direction
+		FVector End = Start + (ForwardVector * TraceDistance); // End position (adjust TraceDistance as needed)
+
+		FHitResult HitResult;
+		FCollisionQueryParams CollisionParams;
+
+		// Ignore the owner in the trace
+		CollisionParams.AddIgnoredActor(Owner);
+
+		// Perform the line trace
+		bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, Start, End, ECC_Pawn, CollisionParams);
+
+		// Check if we hit something
+		if (bHit)
+		{
+			// Optionally draw debug line
+			if(Debug)
+			{
+				DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 0.f, 0, 1.0f);
+			}
+			
+			// Check if the hit actor is an enemy
+			if (AUTAD_UI_FPS_Enemy* HitEnemy = Cast<AUTAD_UI_FPS_Enemy>(HitResult.GetActor()))
+			{
+				if(!enemyDetected)
+				{
+					enemyDetected = true;
+					if(OnEnemyTargeted.IsBound()) OnEnemyTargeted.Broadcast(true);
+				}
+				
+				if(Debug) UE_LOG(LogTemp, Log, TEXT("Enemy detected: %s"), *HitEnemy->GetName());
+			}
+			else
+			{
+				if(enemyDetected)
+				{
+					enemyDetected = false;
+					if(OnEnemyTargeted.IsBound()) OnEnemyTargeted.Broadcast(false);
+				}
+				
+				if(Debug)UE_LOG(LogTemp, Log, TEXT("No enemy detected."));
+			}
+		}
+		else
+		{
+			if(enemyDetected)
+			{
+				enemyDetected = false;
+				if(OnEnemyTargeted.IsBound()) OnEnemyTargeted.Broadcast(false);
+			}
+			if(Debug) UE_LOG(LogTemp, Log, TEXT("No enemy detected."));
+		}
+	}
 }
 
 void UTP_WeaponComponent::AttachWeapon(AUTAD_UI_FPSCharacter* TargetCharacter)
 {
 	Character = TargetCharacter;
+	
 	if (Character == nullptr || Character->GetHasRifle())
 	{
 		return;
@@ -167,7 +247,13 @@ void UTP_WeaponComponent::AttachWeapon(AUTAD_UI_FPSCharacter* TargetCharacter)
 	
 	// switch bHasRifle so the animation blueprint can switch to another animation set
 	Character->SetHasRifle(true);
+	
+	Character->GetPlayerHUD()->GetCrosshairUI()->SetupWeaponCmp(this);
+	Character->GetPlayerHUD()->GetAmmoCounterUI()->SetupWeaponCmp(this); 
+	Character->GetPlayerHUD()->GetReloadBarUI()->SetupWeaponCmp(this); 
 
+	Debug = Character->DebugOn;
+	
 	// Set up action bindings
 	if (APlayerController* PlayerController = Cast<APlayerController>(Character->GetController()))
 	{
@@ -190,6 +276,18 @@ void UTP_WeaponComponent::AttachWeapon(AUTAD_UI_FPSCharacter* TargetCharacter)
 
 			// CancelReload
 			EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Canceled, this, &UTP_WeaponComponent::CancelReload);
+
+			for (TObjectPtr<UInputTrigger> Element : ReloadAction->Triggers)
+			{
+				if(Element.IsA(UInputTriggerHold::StaticClass()))
+				{
+					UInputTriggerHold* HoldTrigger = Cast<UInputTriggerHold>(Element);
+					if(HoldTrigger)
+					{
+						ReloadTime = HoldTrigger->HoldTimeThreshold;
+					}
+				}
+			}
 		}
 	}
 }

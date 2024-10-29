@@ -10,7 +10,9 @@
 
 // UI
 #include "Blueprint/UserWidget.h"
+#include "SkillTree/SkillTreeComponent.h"
 #include "UI/PlayerHUD.h"
+#include "UI/SplashArtScreen.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AUTAD_UI_FPSCharacter
@@ -38,6 +40,8 @@ AUTAD_UI_FPSCharacter::AUTAD_UI_FPSCharacter()
 	//Mesh1P->SetRelativeRotation(FRotator(0.9f, -19.19f, 5.2f));
 	Mesh1P->SetRelativeLocation(FVector(-30.f, 0.f, -150.f));
 
+
+	SkillTreeComponent = CreateDefaultSubobject<USkillTreeComponent>(TEXT("SkillTreeCmp"));
 }
 
 void AUTAD_UI_FPSCharacter::BeginPlay()
@@ -58,6 +62,7 @@ void AUTAD_UI_FPSCharacter::BeginPlay()
 	if (PlayerHUDWidget)
 	{
 		PlayerHUDInstance = CreateWidget<UPlayerHUD>(GetWorld(), PlayerHUDWidget);
+		PlayerHUDInstance->Setup(this);
 		PlayerHUDInstance->AddToViewport();
 		PlayerHUDInstance->ShowNoWeapon();
 	}
@@ -65,6 +70,16 @@ void AUTAD_UI_FPSCharacter::BeginPlay()
 	{
 		UE_LOG(LogTemp, Error, TEXT("Player HUD Widget not assigned to UTAD_UI_FPSCharacter"));
 		GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Yellow, TEXT("Player HUD Widget not assigned to UTAD_UI_FPSCharacter"));
+	}
+
+	USplashArtScreen* SplashArtScreen = CreateWidget<USplashArtScreen>(GetWorld(), SplashArtWidget); 
+	if (SplashArtScreen)
+	{
+		SplashArtScreen->AddToViewport(1); 
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SplashArtScreen creation failed!"));
 	}
 }
 
@@ -121,6 +136,8 @@ void AUTAD_UI_FPSCharacter::SetHealth(int NewHealth)
 	{
 		Health = ClampedNewHealth;
 	}
+
+	if(HealthChanged.IsBound()) HealthChanged.Broadcast(Health, MaxHealth);
 }
 
 int AUTAD_UI_FPSCharacter::GetHealth()
@@ -152,6 +169,8 @@ bool AUTAD_UI_FPSCharacter::GetHasRifle()
 void AUTAD_UI_FPSCharacter::SetTotalBullets(int NewTotalBullets)
 {
 	TotalBullets = NewTotalBullets;
+
+	if(OnTotalBulletsChanged.IsBound()) OnTotalBulletsChanged.Broadcast(TotalBullets);  
 }
 
 int AUTAD_UI_FPSCharacter::GetTotalBullets()
@@ -159,9 +178,35 @@ int AUTAD_UI_FPSCharacter::GetTotalBullets()
 	return TotalBullets;
 }
 
+void AUTAD_UI_FPSCharacter::SetSkillPoints(int newSkillPoints)
+{
+	SkillPoints = newSkillPoints;
+
+	if(OnSkillPointChanged.IsBound()) OnSkillPointChanged.Broadcast(SkillPoints); 
+}
+
 void AUTAD_UI_FPSCharacter::AddBullets(int Bullets)
 {
-	TotalBullets += Bullets;
+	SetTotalBullets(Bullets);
+}
+
+void AUTAD_UI_FPSCharacter::GetDamaged(int _inDamage)
+{
+	SetHealth(Health - _inDamage);
+	float percentageLeft = static_cast<float>(Health) / static_cast<float>(MaxHealth);
+	if(OnDamaged.IsBound()) OnDamaged.Broadcast(percentageLeft);  
+}
+
+void AUTAD_UI_FPSCharacter::GetHealed(int _inHeal)
+{
+	SetHealth(Health + _inHeal);
+}
+
+UPlayerHUD* AUTAD_UI_FPSCharacter::GetPlayerHUD() const
+{
+	if(PlayerHUDInstance) return PlayerHUDInstance;
+
+	return nullptr;
 }
 
 void AUTAD_UI_FPSCharacter::SetAttachedWeaponComponent(UTP_WeaponComponent* WeaponComponent)
