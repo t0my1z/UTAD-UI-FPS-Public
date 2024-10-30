@@ -1,5 +1,14 @@
 Memoria de la actividad -- Tomás Rodrigo Castrillo
 
+Controles:
+Player 			SkilLTree:
+Left Click - Shoot	Tab - Show/Hide SkillTreeUI
+Space- Jump		P - Add SkillPoints
+R - Reload		Space - Hold To Unlock Skill
+WASD - Move		WASD - Navigate UI
+1 - Damage
+2 - Heal
+
 Barra de vida del jugador
 Para hacer que la ProgressBar muestre el valor de Health, opte por usar delegados a los que el widget 
 se suscribe en su método Setup, que llama el PlayerHUD en su método de Setup.

@@ -15,7 +15,7 @@ UCLASS()
 class UTAD_UI_FPS_API UPlayerHitMarker : public UUserWidget
 {
 	GENERATED_BODY()
-
+	
 	
 public:
 
