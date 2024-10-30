@@ -153,10 +153,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = Damage)
 	void GetDamaged(int _inDamage);
-
-	UFUNCTION(BlueprintCallable, Category = Damage)
-	void GetHealed(int _inHeal); 
-
+	
 	UPlayerHUD* GetPlayerHUD() const;
 	
 	void SetAttachedWeaponComponent(UTP_WeaponComponent* WeaponComponent);

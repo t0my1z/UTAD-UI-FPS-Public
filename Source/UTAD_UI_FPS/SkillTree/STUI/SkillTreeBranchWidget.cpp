@@ -6,19 +6,20 @@
 #include "SkillTreeObjectWidget.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
+#include "Components/VerticalBoxSlot.h"
 #include "UTAD_UI_FPS/SkillTree/SkillTree.h"
 
-void USkillTreeBranchWidget::InitializeBranch(const FTreeBranch& _inBranchData)
+void USkillTreeBranchWidget::InitializeBranch(const FTreeBranch& _inBranchData, USkillTreeComponent* _inSTCmp)
 {
 	BranchNameText->SetText(_inBranchData.BranchName);
 
 	for (const FTreeSkill& TreeSkill : _inBranchData.SkillsInBranch)
 	{
-		AddSkillObject(TreeSkill); 
+		AddSkillObject(TreeSkill, _inSTCmp);  
 	}
 }
 
-void USkillTreeBranchWidget::AddSkillObject(const FTreeSkill& _inSkill)
+void USkillTreeBranchWidget::AddSkillObject(const FTreeSkill& _inSkill, USkillTreeComponent* _inSTCmp)
 {
 	if (!SkillTreeObjectWidgetType || !SkillBox)
 	{
@@ -29,10 +30,10 @@ void USkillTreeBranchWidget::AddSkillObject(const FTreeSkill& _inSkill)
 	USkillTreeObjectWidget* NewSkillWidget = CreateWidget<USkillTreeObjectWidget>(GetWorld(), SkillTreeObjectWidgetType);
 	if (NewSkillWidget)
 	{
-		NewSkillWidget->InitializeSkill(_inSkill);
+		NewSkillWidget->InitializeSkill(_inSkill, _inSTCmp);
 		
-		SkillBox->AddChildToVerticalBox(NewSkillWidget); 
-		
+		UVerticalBoxSlot* boxSlot = SkillBox->AddChildToVerticalBox(NewSkillWidget); 
+		if(boxSlot) boxSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));  
 		SkillWidgets.Add(NewSkillWidget);
 	}
 }

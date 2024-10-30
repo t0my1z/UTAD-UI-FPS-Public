@@ -7,11 +7,12 @@
 #include "Components/ActorComponent.h"
 #include "SkillTreeComponent.generated.h"
 
-
 class USkillTreeWidget;
 class AUTAD_UI_FPSCharacter;
 class UDataTable;
 class UInputAction;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnUnlockState);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class UTAD_UI_FPS_API USkillTreeComponent : public UActorComponent
@@ -34,6 +35,8 @@ public:
 	void LoadSkillTree(FName RowName);
 
 	void CreateSkillTreeUI();
+
+#pragma region Input Functions
 	
 	void SetupInput();
 
@@ -54,6 +57,13 @@ public:
 
 	UFUNCTION()
 	void NavigateTree(const FInputActionValue& Value);
+
+#pragma endregion 
+	
+private:
+
+	int GetCurrentSelectedSkillCost();
+	
 public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill Tree")
@@ -73,10 +83,10 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	class UInputMappingContext* SkillTreeMappingContext; 
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* ToggleSTAction;
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* AddSTPointsAction;
 
@@ -85,6 +95,16 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category=Input, meta=(AllowPrivateAccess = "true"))
 	UInputAction* NavigateSTAction; 
+
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnUnlockState OnUnlockStart;
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnUnlockState OnUnlockComplete;
+	UPROPERTY(BlueprintAssignable, Category="Events")
+	FOnUnlockState OnUnlockEnd;
+	
+	float TimeToUnlockSkill;
+	float UnlockSkillTimer; 
 	
 private:
 	UPROPERTY() 
@@ -96,5 +116,7 @@ private:
 	UPROPERTY()
 	USkillTreeWidget* SkillTreeWidget;
 
-	bool skillTreeInScreen = false;
+	bool skillTreeInScreen;
+	
+	bool unlockingSkill;
 };

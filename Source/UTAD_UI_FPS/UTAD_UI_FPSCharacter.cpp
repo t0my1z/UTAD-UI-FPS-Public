@@ -197,11 +197,6 @@ void AUTAD_UI_FPSCharacter::GetDamaged(int _inDamage)
 	if(OnDamaged.IsBound()) OnDamaged.Broadcast(percentageLeft);  
 }
 
-void AUTAD_UI_FPSCharacter::GetHealed(int _inHeal)
-{
-	SetHealth(Health + _inHeal);
-}
-
 UPlayerHUD* AUTAD_UI_FPSCharacter::GetPlayerHUD() const
 {
 	if(PlayerHUDInstance) return PlayerHUDInstance;

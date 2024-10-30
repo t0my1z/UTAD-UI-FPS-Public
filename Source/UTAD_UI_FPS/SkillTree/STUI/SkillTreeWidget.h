@@ -6,6 +6,8 @@
 #include "Blueprint/UserWidget.h"
 #include "SkillTreeWidget.generated.h"
 
+class UTextBlock;
+class USkillTreeComponent;
 class UHorizontalBox;
 struct FTreeBranch;
 class USkillTreeBranchWidget;
@@ -18,8 +20,11 @@ class UTAD_UI_FPS_API USkillTreeWidget : public UUserWidget
 	GENERATED_BODY()
 public:
 	
+	void InitVars(USkillTreeComponent* _inSTCmp);
+	void Setup();
+	void CloseUp();
 	void AddBranch(const FTreeBranch& _inBranch);
-
+	
 	void UpdateVerticalIndex(int _modification);
 	void UpdateHorizontalIndex(int _modification);
 	
@@ -28,6 +33,11 @@ public:
 
 	int verticalIndex;
 	int horizontalIndex;
+
+private:
+	
+	UFUNCTION()
+	void UpdateSkillPoints(int _inPoints);
 	
 private:
 	UPROPERTY()
@@ -35,4 +45,10 @@ private:
 	
 	UPROPERTY(meta = (BindWidget))
 	UHorizontalBox* BranchBox;
+	
+	UPROPERTY(meta = (BindWidget))
+	UTextBlock* SkillPointText; 
+	
+	UPROPERTY() 
+	USkillTreeComponent* SkillTreeCmp;
 };

@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "SkillTreeBranchWidget.generated.h"
 
+class USkillTreeComponent;
 class UVerticalBox;
 struct FTreeBranch;
 class UTextBlock;
@@ -21,15 +22,26 @@ class UTAD_UI_FPS_API USkillTreeBranchWidget : public UUserWidget
 
 public:
 
-	void InitializeBranch(const FTreeBranch& _inBranchData);
+	UFUNCTION(BlueprintImplementableEvent, Category="Custom")
+	void FocusGained();
+
+	UFUNCTION(BlueprintImplementableEvent, Category="Custom")
+	void FocusLost();
+	
+	void InitializeBranch(const FTreeBranch& _inBranchData, USkillTreeComponent* _inSTCmp);
 
 	int NumOfSkillsInBranch() const { return SkillWidgets.Num() - 1;}
 	
 	UPROPERTY(EditAnywhere, Category = "SkillTree")  
 	TSubclassOf<USkillTreeObjectWidget> SkillTreeObjectWidgetType;
+	
+	TArray<USkillTreeObjectWidget*>& GetSkillObjectWidgets() { return SkillWidgets; }
 
+	UFUNCTION(BlueprintCallable)
+	UTextBlock* GetBranchNameText() { return BranchNameText; }
+	
 private:
-	void AddSkillObject(const FTreeSkill& _inSkill);
+	void AddSkillObject(const FTreeSkill& _inSkill, USkillTreeComponent* _inSTCmp);
 	
 private:
 	UPROPERTY()
